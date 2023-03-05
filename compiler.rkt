@@ -1,5 +1,4 @@
 #lang racket
-(require (prefix-in constr: "helpers.rkt"))
 (require
  cpsc411/compiler-lib
  cpsc411/2c-run-time)
@@ -78,6 +77,10 @@
    ))
 
 
+
+
+(define (mmake-begin p)
+  `(begin ,@p))
 
 (define (module? any)
   (match any
@@ -263,9 +266,6 @@
 					    (set! x.1 (+ 5 5))
 					    (+ x.1 x.1)))
 					)))
-
-
-
 
 
 
@@ -537,7 +537,7 @@
    (foldr (lambda(instr acc) (match instr
 				   [`(begin ,s ...) (append (flatten-begins-foldr instr) acc)]
 				   [_ `(,instr . ,acc)])) '() (cut-begin p)))
-(constr:make-begin (flatten-begins-foldr p)))
+(mmake-begin (flatten-begins-foldr p)))
 
 
 
@@ -577,12 +577,12 @@
  ; patch-instructions:  Traverses the para-asm-lang-v2 program and converts instructions not supported in paren-x64-fvars-v2 to their equivalent  
 
 (define (patch-instructions p)
-  (constr:make-begin 
+  (mmake-begin 
     (foldr (lambda (instr acc) (match instr
 				    [`(halt ,triv) (cons `(set! rax ,triv) acc)]
 				    [`(set! ,fv_1 ,fv_2)
 				       #:when (and (fvar? fv_1) (fvar? fv_2))
-				       `(((set! r10 ,fv_2) (set! ,fv_1 r10)) . ,acc)]
+				       `((set! r10 ,fv_2) (set! ,fv_1 r10) . ,acc)]
 				    [_ `(,instr . ,acc)])) '() (cut-begin p))))
 
 (module+ test
@@ -751,7 +751,12 @@
 
 
 
-
+'(begin 
+   (set! fv0 10)
+   (set! fv1 42)
+   (set! fv1 (+ fv1 fv0))
+   ((set! r10 fv1) (set! fv0 r10))
+	(set! rax fv0))
 
 
 
@@ -776,3 +781,5 @@
 
 
    ))))
+
+
